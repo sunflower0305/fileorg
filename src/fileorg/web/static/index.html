@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileOrganizer - 懒人整理神器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .logo {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .title {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #888;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+
+        /* Main Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        /* Input Section */
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+            color: #aaa;
+        }
+
+        .path-input {
+            width: 100%;
+            padding: 18px 24px;
+            font-size: 1.1em;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            transition: all 0.3s;
+        }
+
+        .path-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .path-input::placeholder {
+            color: #666;
+        }
+
+        /* Prompt Input */
+        .prompt-section {
+            margin-bottom: 30px;
+        }
+
+        .prompt-input {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 1em;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #fff;
+            transition: all 0.3s;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #764ba2;
+        }
+
+        .prompt-hints {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .hint-tag {
+            padding: 8px 16px;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 20px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .hint-tag:hover {
+            background: rgba(102, 126, 234, 0.4);
+            border-color: #667eea;
+        }
+
+        /* Buttons */
+        .buttons {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 18px 32px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-scan {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        .btn-scan:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-organize {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #fff;
+        }
+
+        .btn-organize:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-execute {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: #fff;
+        }
+
+        .btn-execute:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(56, 239, 125, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Results */
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .result-icon {
+            font-size: 2em;
+        }
+
+        .result-title {
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #888;
+            margin-top: 4px;
+        }
+
+        /* Groups List */
+        .groups-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .group-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s;
+        }
+
+        .group-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .group-icon {
+            font-size: 1.5em;
+        }
+
+        .group-info {
+            flex: 1;
+        }
+
+        .group-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .group-files {
+            font-size: 0.85em;
+            color: #888;
+        }
+
+        .group-count {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            font-size: 3em;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 16px;
+            color: #888;
+        }
+
+        /* Success Message */
+        .success-msg {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .success-msg.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        .success-icon {
+            font-size: 4em;
+            margin-bottom: 16px;
+        }
+
+        .success-text {
+            font-size: 1.3em;
+            color: #38ef7d;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .title { font-size: 1.8em; }
+            .logo { font-size: 60px; }
+            .card { padding: 24px; }
+            .buttons { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">🗂️</div>
+            <h1 class="title">FileOrganizer</h1>
+            <p class="subtitle">AI 帮你整理文件，懒人专属神器 ✨</p>
+        </header>
+
+        <main class="card">
+            <div class="input-section">
+                <label class="input-label">📁 选择要整理的文件夹</label>
+                <input
+                    type="text"
+                    class="path-input"
+                    id="pathInput"
+                    placeholder="输入路径，或点击下方快捷按钮"
+                >
+                <div class="prompt-hints" style="margin-top: 12px;">
+                    <span class="hint-tag" onclick="setPath('/mnt/c/Users/32680/Desktop')">🖥️ 桌面</span>
+                    <span class="hint-tag" onclick="setPath('/mnt/c/Users/32680/Downloads')">📥 下载</span>
+                    <span class="hint-tag" onclick="setPath('/mnt/c/Users/32680/Documents')">📄 文档</span>
+                    <span class="hint-tag" onclick="setPath('~')">🏠 主目录</span>
+                </div>
+            </div>
+
+            <div class="prompt-section">
+                <label class="input-label">💡 告诉 AI 怎么分类（可选）</label>
+                <input
+                    type="text"
+                    class="prompt-input"
+                    id="promptInput"
+                    placeholder="如：按项目分类、按月份归档、按客户分组..."
+                >
+                <div class="prompt-hints">
+                    <span class="hint-tag" onclick="setPrompt('按项目分类')">📦 按项目</span>
+                    <span class="hint-tag" onclick="setPrompt('按月份归档')">📅 按月份</span>
+                    <span class="hint-tag" onclick="setPrompt('按客户分组')">👥 按客户</span>
+                    <span class="hint-tag" onclick="setPrompt('分成进行中和已完成')">✅ 按状态</span>
+                </div>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-scan" onclick="scan()">
+                    <span>🔍</span> 扫描看看
+                </button>
+                <button class="btn btn-organize" onclick="organize()">
+                    <span>🤖</span> AI 智能分组
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner">⏳</div>
+                <p class="loading-text" id="loadingText">正在分析文件...</p>
+            </div>
+
+            <!-- Scan Results -->
+            <div class="results" id="scanResults">
+                <div class="result-header">
+                    <span class="result-icon">📊</span>
+                    <span class="result-title">扫描结果</span>
+                </div>
+                <div class="stats-grid" id="statsGrid"></div>
+
+                <!-- AI Analysis Section -->
+                <div id="aiAnalysis" style="display: none; margin-top: 24px;">
+                    <div class="result-header">
+                        <span class="result-icon">🤖</span>
+                        <span class="result-title">AI 分析</span>
+                    </div>
+                    <div style="background: rgba(102, 126, 234, 0.1); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
+                        <p id="aiSummary" style="line-height: 1.6;"></p>
+                        <p id="aiEncouragement" style="color: #38ef7d; margin-top: 12px; font-style: italic;"></p>
+                    </div>
+
+                    <div class="result-header" style="margin-top: 20px;">
+                        <span class="result-icon">💡</span>
+                        <span class="result-title">AI 建议 <span style="font-size: 0.7em; color: #888;">（点击可用于整理）</span></span>
+                    </div>
+                    <div class="groups-list" id="suggestionsList"></div>
+                </div>
+            </div>
+
+            <!-- Organize Results -->
+            <div class="results" id="organizeResults">
+                <div class="result-header">
+                    <span class="result-icon">🎯</span>
+                    <span class="result-title">AI 整理方案</span>
+                </div>
+                <div class="groups-list" id="groupsList"></div>
+                <div style="margin-top: 24px; text-align: center;">
+                    <button class="btn btn-execute" onclick="execute()" id="executeBtn">
+                        <span>🚀</span> 一键执行整理
+                    </button>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div class="success-msg" id="successMsg">
+                <div class="success-icon">🎉</div>
+                <p class="success-text">整理完成！去看看你的文件夹吧~</p>
+                <p style="color: #888; margin-top: 12px;" id="successStats"></p>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>Made with ❤️ for lazy people | <a href="https://github.com/yourname/fileorg">GitHub</a></p>
+        </footer>
+    </div>
+
+    <script>
+        const pathInput = document.getElementById('pathInput');
+        const promptInput = document.getElementById('promptInput');
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+        const scanResults = document.getElementById('scanResults');
+        const organizeResults = document.getElementById('organizeResults');
+        const successMsg = document.getElementById('successMsg');
+
+        function setPrompt(text) {
+            promptInput.value = text;
+        }
+
+        function setPath(path) {
+            pathInput.value = path;
+        }
+
+        function showLoading(text) {
+            loading.classList.add('show');
+            loadingText.textContent = text;
+            scanResults.classList.remove('show');
+            organizeResults.classList.remove('show');
+            successMsg.classList.remove('show');
+        }
+
+        function hideLoading() {
+            loading.classList.remove('show');
+        }
+
+        async function scan() {
+            const path = pathInput.value.trim();
+            if (!path) {
+                alert('请输入文件夹路径 📁');
+                return;
+            }
+
+            showLoading('正在扫描并进行 AI 分析... 🔍🤖');
+
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path, use_ai: true })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail);
+                }
+
+                const data = await response.json();
+                hideLoading();
+                showScanResults(data);
+            } catch (error) {
+                hideLoading();
+                alert('扫描失败: ' + error.message);
+            }
+        }
+
+        function showScanResults(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            const aiAnalysis = document.getElementById('aiAnalysis');
+
+            // Show stats
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${data.total_files}</div>
+                    <div class="stat-label">文件总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${data.total_size}</div>
+                    <div class="stat-label">总大小</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${data.file_types.length}</div>
+                    <div class="stat-label">文件类型</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${data.ai_analysis?.organization_score || '-'}</div>
+                    <div class="stat-label">整理评分</div>
+                </div>
+            `;
+
+            // Show AI analysis if available
+            if (data.ai_analysis && !data.ai_analysis.error) {
+                document.getElementById('aiSummary').textContent = data.ai_analysis.summary || '';
+                document.getElementById('aiEncouragement').textContent = data.ai_analysis.encouragement || '';
+
+                // Show suggestions
+                const suggestionsList = document.getElementById('suggestionsList');
+                const priorityIcons = { high: '🔴', medium: '🟡', low: '🟢' };
+                const categoryIcons = { cleanup: '🧹', organize: '📁', backup: '💾', naming: '✏️' };
+
+                suggestionsList.innerHTML = (data.ai_analysis.suggestions || []).map(s => `
+                    <div class="group-item" style="cursor: pointer;" onclick="useSuggestion('${s.title}')">
+                        <span class="group-icon">${categoryIcons[s.category] || '💡'}</span>
+                        <div class="group-info">
+                            <div class="group-name">${s.title}</div>
+                            <div class="group-files">${s.description}</div>
+                        </div>
+                        <span class="group-count">${priorityIcons[s.priority] || ''} ${s.priority}</span>
+                    </div>
+                `).join('');
+
+                aiAnalysis.style.display = 'block';
+            } else {
+                aiAnalysis.style.display = 'none';
+            }
+
+            scanResults.classList.add('show');
+        }
+
+        function useSuggestion(title) {
+            // Convert suggestion to organize prompt
+            promptInput.value = title;
+            // Scroll to organize button
+            document.querySelector('.btn-organize').scrollIntoView({ behavior: 'smooth' });
+            // Highlight the prompt input
+            promptInput.style.borderColor = '#38ef7d';
+            setTimeout(() => { promptInput.style.borderColor = ''; }, 2000);
+        }
+
+        async function organize() {
+            const path = pathInput.value.trim();
+            if (!path) {
+                alert('请输入文件夹路径 📁');
+                return;
+            }
+
+            const customPrompt = promptInput.value.trim();
+            showLoading('AI 正在分析文件... 🤖');
+
+            try {
+                const response = await fetch('/api/organize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path, custom_prompt: customPrompt })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail);
+                }
+
+                const data = await response.json();
+                hideLoading();
+                showOrganizeResults(data);
+            } catch (error) {
+                hideLoading();
+                alert('分析失败: ' + error.message);
+            }
+        }
+
+        function showOrganizeResults(data) {
+            const groupsList = document.getElementById('groupsList');
+            const icons = ['📁', '📂', '📦', '🗃️', '💼', '🎨', '🔧', '📝', '🎵', '🎬'];
+
+            groupsList.innerHTML = data.groups.map((group, i) => `
+                <div class="group-item">
+                    <span class="group-icon">${icons[i % icons.length]}</span>
+                    <div class="group-info">
+                        <div class="group-name">${group.folder}</div>
+                        <div class="group-files">${group.files.slice(0, 3).join(', ')}${group.has_more ? '...' : ''}</div>
+                    </div>
+                    <span class="group-count">${group.count} 个</span>
+                </div>
+            `).join('');
+
+            scanResults.classList.remove('show');
+            organizeResults.classList.add('show');
+            window.organizeData = data;
+        }
+
+        async function execute() {
+            if (!confirm('确定要执行整理吗？文件将被移动到对应文件夹。')) {
+                return;
+            }
+
+            const path = pathInput.value.trim();
+            const customPrompt = promptInput.value.trim();
+            showLoading('正在整理文件... 🚀');
+
+            try {
+                const response = await fetch('/api/organize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path, custom_prompt: customPrompt, execute: true })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail);
+                }
+
+                const data = await response.json();
+                hideLoading();
+                showSuccess(data);
+            } catch (error) {
+                hideLoading();
+                alert('整理失败: ' + error.message);
+            }
+        }
+
+        function showSuccess(data) {
+            organizeResults.classList.remove('show');
+            successMsg.classList.add('show');
+            document.getElementById('successStats').textContent =
+                `成功移动 ${data.stats?.success || 0} 个文件，${data.stats?.failed || 0} 个失败`;
+        }
+
+        // 自动检测常用路径
+        if (navigator.platform.includes('Win')) {
+            pathInput.placeholder = '如 C:\\Users\\你的名字\\Desktop';
+        }
+    </script>
+</body>
+</html>
