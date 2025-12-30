@@ -441,20 +441,42 @@
 
                 <!-- AI Analysis Section -->
                 <div id="aiAnalysis" style="display: none; margin-top: 24px;">
-                    <div class="result-header">
-                        <span class="result-icon">🤖</span>
-                        <span class="result-title">AI 分析</span>
-                    </div>
-                    <div style="background: rgba(102, 126, 234, 0.1); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
-                        <p id="aiSummary" style="line-height: 1.6;"></p>
-                        <p id="aiEncouragement" style="color: #38ef7d; margin-top: 12px; font-style: italic;"></p>
+                    <!-- AI Summary Card -->
+                    <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%); border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(102, 126, 234, 0.3);">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                            <span style="font-size: 1.5em;">🤖</span>
+                            <span style="font-weight: 600; font-size: 1.1em;">AI 分析报告</span>
+                            <span id="chaosLevel" style="margin-left: auto; padding: 4px 12px; border-radius: 12px; font-size: 0.8em;"></span>
+                        </div>
+                        <p id="aiSummary" style="line-height: 1.6; color: #ddd;"></p>
                     </div>
 
-                    <div class="result-header" style="margin-top: 20px;">
-                        <span class="result-icon">💡</span>
-                        <span class="result-title">AI 建议 <span style="font-size: 0.7em; color: #888;">（点击可用于整理）</span></span>
+                    <!-- Compact Info Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; text-align: center;">
+                            <div style="font-size: 0.75em; color: #888; margin-bottom: 4px;">⏰ 高峰时段</div>
+                            <div id="peakHours" style="font-weight: 600; color: #667eea;"></div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; text-align: center;">
+                            <div style="font-size: 0.75em; color: #888; margin-bottom: 4px;">📅 活跃日</div>
+                            <div id="peakDays" style="font-weight: 600; color: #667eea;"></div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; text-align: center;">
+                            <div style="font-size: 0.75em; color: #888; margin-bottom: 4px;">📊 整理评分</div>
+                            <div id="orgScore" style="font-weight: 600; color: #38ef7d;"></div>
+                        </div>
                     </div>
-                    <div class="groups-list" id="suggestionsList"></div>
+
+                    <!-- Suggestions as clickable tags -->
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 0.85em; color: #888; margin-bottom: 10px;">💡 AI 建议 <span style="color: #667eea;">（点击使用）</span></div>
+                        <div id="suggestionsTags" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                    </div>
+
+                    <!-- Encouragement -->
+                    <div style="background: rgba(56, 239, 125, 0.1); border-radius: 12px; padding: 14px; border-left: 3px solid #38ef7d;">
+                        <p id="aiEncouragement" style="color: #38ef7d; font-size: 0.9em; line-height: 1.5;"></p>
+                    </div>
                 </div>
             </div>
 
@@ -538,6 +560,13 @@
                 const data = await response.json();
                 hideLoading();
                 showScanResults(data);
+
+                // Show GitHub star prompt (only once, after scan completes)
+                if (!localStorage.getItem('fo_starred')) {
+                    setTimeout(() => {
+                        showStarPrompt();
+                    }, 1500);
+                }
             } catch (error) {
                 hideLoading();
                 alert('扫描失败: ' + error.message);
@@ -548,46 +577,78 @@
             const statsGrid = document.getElementById('statsGrid');
             const aiAnalysis = document.getElementById('aiAnalysis');
 
-            // Show stats
+            // Show stats (compact)
             statsGrid.innerHTML = `
                 <div class="stat-card">
                     <div class="stat-value">${data.total_files}</div>
-                    <div class="stat-label">文件总数</div>
+                    <div class="stat-label">文件</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">${data.total_size}</div>
-                    <div class="stat-label">总大小</div>
+                    <div class="stat-label">大小</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">${data.file_types.length}</div>
-                    <div class="stat-label">文件类型</div>
+                    <div class="stat-label">类型</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${data.ai_analysis?.organization_score || '-'}</div>
-                    <div class="stat-label">整理评分</div>
+                    <div class="stat-value">${data.issues.stale_files + data.issues.empty_dirs}</div>
+                    <div class="stat-label">问题</div>
                 </div>
             `;
 
             // Show AI analysis if available
             if (data.ai_analysis && !data.ai_analysis.error) {
-                document.getElementById('aiSummary').textContent = data.ai_analysis.summary || '';
-                document.getElementById('aiEncouragement').textContent = data.ai_analysis.encouragement || '';
+                const ai = data.ai_analysis;
 
-                // Show suggestions
-                const suggestionsList = document.getElementById('suggestionsList');
-                const priorityIcons = { high: '🔴', medium: '🟡', low: '🟢' };
-                const categoryIcons = { cleanup: '🧹', organize: '📁', backup: '💾', naming: '✏️' };
+                // Summary
+                document.getElementById('aiSummary').textContent = ai.summary || '';
+                document.getElementById('aiEncouragement').textContent = ai.encouragement || '';
 
-                suggestionsList.innerHTML = (data.ai_analysis.suggestions || []).map(s => `
-                    <div class="group-item" style="cursor: pointer;" onclick="useSuggestion('${s.title}')">
-                        <span class="group-icon">${categoryIcons[s.category] || '💡'}</span>
-                        <div class="group-info">
-                            <div class="group-name">${s.title}</div>
-                            <div class="group-files">${s.description}</div>
-                        </div>
-                        <span class="group-count">${priorityIcons[s.priority] || ''} ${s.priority}</span>
-                    </div>
-                `).join('');
+                // Chaos level badge
+                const chaosColors = { low: '#38ef7d', medium: '#f5a623', high: '#f5576c', extreme: '#ff0000' };
+                const chaosLabels = { low: '井然有序', medium: '轻微混乱', high: '需要整理', extreme: '紧急!' };
+                const chaos = ai.personality?.chaos_level || 'low';
+                document.getElementById('chaosLevel').innerHTML = chaosLabels[chaos] || chaos;
+                document.getElementById('chaosLevel').style.background = chaosColors[chaos] || '#667eea';
+                document.getElementById('chaosLevel').style.color = '#000';
+
+                // Work pattern
+                const hours = ai.work_pattern?.peak_hours || [];
+                document.getElementById('peakHours').textContent = hours.length ? hours.slice(0, 3).map(h => h + ':00').join(' ') : '-';
+
+                const days = ai.work_pattern?.peak_days || [];
+                const dayMap = { Monday: '周一', Tuesday: '周二', Wednesday: '周三', Thursday: '周四', Friday: '周五', Saturday: '周六', Sunday: '周日' };
+                document.getElementById('peakDays').textContent = days.length ? days.slice(0, 2).map(d => dayMap[d] || d).join(' ') : '-';
+
+                // Score
+                const score = ai.file_habit?.organization_score || 0;
+                document.getElementById('orgScore').textContent = score + '/100';
+
+                // Suggestions as selectable tags
+                const suggestionsTags = document.getElementById('suggestionsTags');
+                const priorityColors = { high: '#f5576c', medium: '#f5a623', low: '#38ef7d' };
+                window.selectedSuggestions = new Set();
+
+                suggestionsTags.innerHTML = (ai.suggestions || []).map((s, i) => `
+                    <span data-idx="${i}" data-text="${s.title}"
+                          onclick="toggleSuggestion(this)"
+                          style="padding: 8px 14px; background: rgba(255,255,255,0.08); border-radius: 20px;
+                                 cursor: pointer; font-size: 0.85em; border-left: 3px solid ${priorityColors[s.priority] || '#667eea'};
+                                 transition: all 0.2s; user-select: none;"
+                          title="${s.description}">
+                        ${s.title}
+                    </span>
+                `).join('') + `
+                    <span onclick="applySelectedSuggestions()"
+                          style="padding: 8px 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                 border-radius: 20px; cursor: pointer; font-size: 0.85em; font-weight: 600;
+                                 transition: all 0.2s; margin-left: 8px;"
+                          onmouseover="this.style.transform='scale(1.05)'"
+                          onmouseout="this.style.transform='scale(1)'">
+                        ✨ 使用选中
+                    </span>
+                `;
 
                 aiAnalysis.style.display = 'block';
             } else {
@@ -597,14 +658,15 @@
             scanResults.classList.add('show');
         }
 
-        function useSuggestion(title) {
-            // Convert suggestion to organize prompt
-            promptInput.value = title;
-            // Scroll to organize button
+        function useSuggestion(text) {
+            promptInput.value = text;
             document.querySelector('.btn-organize').scrollIntoView({ behavior: 'smooth' });
-            // Highlight the prompt input
             promptInput.style.borderColor = '#38ef7d';
-            setTimeout(() => { promptInput.style.borderColor = ''; }, 2000);
+            promptInput.style.boxShadow = '0 0 20px rgba(56, 239, 125, 0.3)';
+            setTimeout(() => {
+                promptInput.style.borderColor = '';
+                promptInput.style.boxShadow = '';
+            }, 2000);
         }
 
         async function organize() {
@@ -693,6 +755,97 @@
             successMsg.classList.add('show');
             document.getElementById('successStats').textContent =
                 `成功移动 ${data.stats?.success || 0} 个文件，${data.stats?.failed || 0} 个失败`;
+        }
+
+        function toggleSuggestion(el) {
+            const idx = el.dataset.idx;
+            if (window.selectedSuggestions.has(idx)) {
+                window.selectedSuggestions.delete(idx);
+                el.style.background = 'rgba(255,255,255,0.08)';
+                el.style.boxShadow = 'none';
+            } else {
+                window.selectedSuggestions.add(idx);
+                el.style.background = 'rgba(102, 126, 234, 0.3)';
+                el.style.boxShadow = '0 0 10px rgba(102, 126, 234, 0.4)';
+            }
+        }
+
+        function applySelectedSuggestions() {
+            const suggestionTags = document.querySelectorAll('#suggestionsTags span[data-idx]');
+            const selected = [];
+            suggestionTags.forEach(tag => {
+                if (window.selectedSuggestions.has(tag.dataset.idx)) {
+                    selected.push(tag.dataset.text);
+                }
+            });
+            if (selected.length === 0) {
+                alert('请先点击选择建议 💡');
+                return;
+            }
+            promptInput.value = selected.join('，');
+            document.querySelector('.btn-organize').scrollIntoView({ behavior: 'smooth' });
+            promptInput.style.borderColor = '#38ef7d';
+            promptInput.style.boxShadow = '0 0 20px rgba(56, 239, 125, 0.3)';
+            setTimeout(() => {
+                promptInput.style.borderColor = '';
+                promptInput.style.boxShadow = '';
+            }, 2000);
+
+        }
+
+        function showStarPrompt() {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'starOverlay';
+            overlay.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.8); display: flex; align-items: center;
+                justify-content: center; z-index: 9999; animation: fadeIn 0.3s;
+            `;
+            overlay.innerHTML = `
+                <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                            border-radius: 24px; padding: 40px; max-width: 400px; text-align: center;
+                            border: 1px solid rgba(102, 126, 234, 0.3); animation: fadeIn 0.3s;">
+                    <div style="font-size: 4em; margin-bottom: 20px;">⭐</div>
+                    <h3 style="font-size: 1.5em; margin-bottom: 12px; color: #fff;">AI 建议好用吗？</h3>
+                    <p style="color: #aaa; margin-bottom: 24px; line-height: 1.6;">
+                        如果觉得有帮助，给项目点个 Star 支持一下吧！<br>
+                        <span style="font-size: 0.85em; color: #667eea;">你的支持是我们持续改进的动力 💪</span>
+                    </p>
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button onclick="goStar()" style="
+                            padding: 14px 28px; border: none; border-radius: 12px; cursor: pointer;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: #fff; font-weight: 600; font-size: 1em;
+                            display: flex; align-items: center; gap: 8px;
+                        ">
+                            <span>⭐</span> 去 Star
+                        </button>
+                        <button onclick="closeStarPrompt()" style="
+                            padding: 14px 28px; border: none; border-radius: 12px; cursor: pointer;
+                            background: rgba(255,255,255,0.1); color: #aaa; font-size: 1em;
+                        ">
+                            下次再说
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            overlay.onclick = (e) => { if (e.target === overlay) closeStarPrompt(); };
+        }
+
+        function goStar() {
+            localStorage.setItem('fo_starred', 'true');
+            window.open('https://github.com/yourname/fileorg', '_blank');
+            closeStarPrompt();
+        }
+
+        function closeStarPrompt() {
+            const overlay = document.getElementById('starOverlay');
+            if (overlay) {
+                localStorage.setItem('fo_starred', 'true');
+                overlay.remove();
+            }
         }
 
         // 自动检测常用路径

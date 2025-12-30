@@ -122,12 +122,27 @@ class HabitAnalyzer:
     def _parse_response(self, response: str) -> AIAnalysis:
         """Parse LLM response into AIAnalysis."""
         try:
-            # Extract JSON from response
+            # Extract JSON from response - try multiple patterns
+            json_str = None
+
+            # Pattern 1: ```json ... ```
             json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
-            else:
-                # Try to find raw JSON
+
+            # Pattern 2: ``` ... ```
+            if not json_str:
+                json_match = re.search(r"```\s*(.*?)\s*```", response, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(1)
+
+            # Pattern 3: Find JSON object directly
+            if not json_str:
+                json_match = re.search(r'\{[\s\S]*\}', response)
+                if json_match:
+                    json_str = json_match.group(0)
+
+            if not json_str:
                 json_str = response
 
             data = json.loads(json_str)
@@ -180,8 +195,16 @@ class HabitAnalyzer:
 
         except (json.JSONDecodeError, KeyError) as e:
             logger.warning(f"Failed to parse AI response: {e}")
-            # Return default with raw response as summary
-            return AIAnalysis(summary=response[:500] if response else "Analysis failed")
+            logger.debug(f"Raw response: {response[:200]}")
+            # Return a friendly fallback instead of raw JSON
+            return AIAnalysis(
+                summary="AI 分析完成，但格式解析遇到问题。请重试或使用命令行版本获取完整报告。",
+                encouragement="每一次整理都是进步！",
+                work_pattern=WorkPattern(peak_hours=[], peak_days=[], activity_description=""),
+                file_habit=FileHabit(most_used_types=[], frequent_locations=[], naming_style="", organization_score=50),
+                personality_insight=PersonalityInsight(chaos_level="medium", strengths=[], challenges=[]),
+                suggestions=[],
+            )
 
     def _create_default_analysis(
         self,

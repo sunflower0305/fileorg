@@ -87,14 +87,33 @@ async def scan_directory(request: ScanRequest):
             ai_analysis = {
                 "summary": ai_result.summary,
                 "encouragement": ai_result.encouragement,
-                "organization_score": ai_result.file_habit.organization_score if ai_result.file_habit else 0,
-                "chaos_level": ai_result.personality_insight.chaos_level if ai_result.personality_insight else "unknown",
+                "gains": ai_result.gains,
+                # Work pattern
+                "work_pattern": {
+                    "peak_hours": ai_result.work_pattern.peak_hours if ai_result.work_pattern else [],
+                    "peak_days": ai_result.work_pattern.peak_days if ai_result.work_pattern else [],
+                    "description": ai_result.work_pattern.activity_description if ai_result.work_pattern else "",
+                },
+                # File habit
+                "file_habit": {
+                    "most_used_types": ai_result.file_habit.most_used_types if ai_result.file_habit else [],
+                    "naming_style": ai_result.file_habit.naming_style if ai_result.file_habit else "",
+                    "organization_score": ai_result.file_habit.organization_score if ai_result.file_habit else 0,
+                },
+                # Personality
+                "personality": {
+                    "chaos_level": ai_result.personality_insight.chaos_level if ai_result.personality_insight else "unknown",
+                    "strengths": ai_result.personality_insight.strengths if ai_result.personality_insight else [],
+                    "challenges": ai_result.personality_insight.challenges if ai_result.personality_insight else [],
+                },
+                # Suggestions
                 "suggestions": [
                     {
                         "title": s.title,
                         "description": s.description,
                         "priority": s.priority,
                         "category": s.category,
+                        "benefit": s.estimated_benefit,
                     }
                     for s in ai_result.suggestions
                 ],
