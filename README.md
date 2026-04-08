@@ -178,3 +178,14 @@ MIT
 ---
 
 **如果这个工具帮到了你，欢迎 Star ⭐**
+
+---
+
+## Contact
+
+If you have questions, ideas, or want to collaborate:
+
+| | |
+|---|---|
+| 📧 Email | 3268007793@qq.com |
+| 📱 Phone / WeChat | 18550207121 |
